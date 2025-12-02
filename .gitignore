@@ -1,0 +1,10 @@
+# Ignore Secrets and Keys
+.streamlit/secrets.toml
+credentials.json
+*.json
+
+# Ignore System Files
+__pycache__/
+*.pyc
+venv/
+.env
