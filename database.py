@@ -99,19 +99,41 @@ def check_availability(date_str, time_slot):
 # --- UPDATED BOOKING FUNCTION ---
 def add_booking(date, time_slot, name, phone, package_name, total_price, details):
     """
-    Saves booking with detailed pricing info in the Notes column.
+    Saves booking with separate Price and Details columns.
+    Checks if date is in the future.
     """
     try:
         if sh is None: connect_db()
+        
+        # 1. DATE VALIDATION (No past bookings)
+        booking_date = datetime.strptime(date, "%Y-%m-%d").date()
+        today_date = datetime.now().date()
+        
+        if booking_date <= today_date:
+            print(f"❌ Attempted to book past/today date: {date}")
+            return "PAST_DATE_ERROR"
+
+        # 2. ADD ROW TO SHEET
         worksheet = sh.worksheet("Bookings")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # We pack the Price and Details into the 'Notes' column so we don't need to change the sheet structure
-        final_notes = f"Total: {total_price} EGP | Details: {details}"
+        # New Column Order: 
+        # Date | Time | Status | Name | Phone | Package | Total_Price | Details | Timestamp
+        row_data = [
+            date, 
+            time_slot, 
+            "Pending", 
+            name, 
+            phone, 
+            package_name, 
+            total_price, 
+            details, 
+            timestamp
+        ]
         
-        # Columns: Date | Time_Slot | Status | Client_Name | Phone | Package_Interest | Notes | Timestamp
-        worksheet.append_row([date, time_slot, "Pending", name, phone, package_name, final_notes, timestamp])
-        return True
+        worksheet.append_row(row_data)
+        return "SUCCESS"
+        
     except Exception as e:
         print(f"Error adding booking: {e}")
-        return False
+        return "SYSTEM_ERROR"
