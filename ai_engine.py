@@ -56,7 +56,7 @@ def get_bot_response(user_message, user_phone):
        
     4. **CAPACITY:** Max 400.
     5. **TONE:** Professional, Egyptian Arabic.
-    6. **PHONE NUMBERS:** Always provide the Admin Phone {admin_phone} with the first 0 (e.g. 0100xxx) for bookings.
+    6. **PHONE NUMBER:** Always provide the Admin Phone {admin_phone} with the first 0 (e.g. 0100xxx) for bookings.
     """
 
     if user_phone not in active_sessions:
