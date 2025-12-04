@@ -5,7 +5,7 @@ import streamlit as st
 
 # --- CONFIGURATION ---
 SHEET_NAME = "Wedding_Hall_Database"
-CACHE_TIMEOUT_MINUTES = 5
+CACHE_TIMEOUT_MINUTES = 1 # Reduced to 1 min for faster testing
 
 # --- GLOBAL VARIABLES ---
 client = None
@@ -57,17 +57,14 @@ def refresh_cache_if_needed():
 # --- HELPER: NORMALIZE DATE ---
 def parse_sheet_date(date_val):
     """
-    Tries to understand messy dates like 4/10/2026 or 5-20-2025
-    and converts them to a standard Python date object.
+    Tries to understand the date. Prioritizes ISO (2026-04-10).
     """
     date_str = str(date_val).strip()
     formats = [
         "%Y-%m-%d",  # 2026-04-10 (Standard)
-        "%m/%d/%Y",  # 4/10/2026 (US Style - Common in Sheets)
-        "%d/%m/%Y",  # 10/4/2026 (Egypt Style)
-        "%Y/%m/%d",  # 2026/04/10
-        "%d-%m-%Y",  # 10-04-2026
-        "%m-%d-%Y"   # 04-10-2026
+        "%d/%m/%Y",  # 10/04/2026 (Egypt)
+        "%m/%d/%Y",  # 04/10/2026 (US)
+        "%Y/%m/%d"
     ]
     
     for fmt in formats:
@@ -83,28 +80,41 @@ def get_full_knowledge_base():
     try:
         info_text = "--- 🏢 GENERAL INFO ---\n"
         for k, v in db_cache["info"].items():
-            info_text += f"- {k}: {v}\n"
+            # Auto-Fix Phone Number in the Knowledge Base
+            val = str(v)
+            if k == "Admin_Phone" and val.isdigit() and len(val) == 10:
+                val = "0" + val
+            info_text += f"- {k}: {val}\n"
+        
         pkg_text = "\n--- 📦 PACKAGES (BAQAT) ---\n"
         for p in db_cache["packages"]:
             pkg_text += f"• ID: {p['Package_ID']} | Name: {p['Name_Arabic']} | Season: {p['Season']} | Guests: {p['Guests']} | Price: {p['Price']} | Details: {p['Details']}\n"
+        
         buffet_text = "\n--- 🍽️ BUFFET OPTIONS ---\n"
         for b in db_cache["buffet"]:
             buffet_text += f"• For Package {b['Package_ID']}: {b['Level_Name']} = {b['Price']} ({b['Items']})\n"
+        
         extras_text = "\n--- ➕ EXTRAS ---\n"
         for e in db_cache["extras"]:
             extras_text += f"• {e['Item_Name']} ({e['Category']}): {e['Price']}\n"
+            
         return info_text + pkg_text + buffet_text + extras_text
     except Exception:
         return "Error loading data."
 
 def get_info(key):
     refresh_cache_if_needed()
-    return db_cache["info"].get(key, "Not Found")
+    val = db_cache["info"].get(key, "Not Found")
+    
+    # AUTO-FIX: If phone number is missing the leading zero, add it back.
+    if key == "Admin_Phone" and str(val).isdigit() and len(str(val)) == 10:
+        return "0" + str(val)
+        
+    return val
 
 def check_availability(target_date_str, time_slot):
     """
     Checks if a slot is blocked in the sheet.
-    target_date_str comes from AI as 'YYYY-MM-DD'
     """
     try:
         # 1. Parse the AI's requested date
@@ -118,15 +128,21 @@ def check_availability(target_date_str, time_slot):
         # 3. Connect and Read Sheet
         if sh is None: connect_db()
         worksheet = sh.worksheet("Bookings")
-        records = worksheet.get_all_records()
         
-        # 4. Loop through sheet and compare DATES (not strings)
+        # Force get values as Displayed Strings (fixes some format issues)
+        records = worksheet.get_all_records(value_render_option='FORMATTED_VALUE')
+        
+        print(f"🔎 CHECKING: {target_date} ({time_slot})") # Debug Log
+        
         for row in records:
-            sheet_date_obj = parse_sheet_date(row['Date']) # Normalize the messy sheet date
+            sheet_date_obj = parse_sheet_date(row['Date'])
             
-            if sheet_date_obj is not None:
-                # Compare strict Date Objects + Time Slot
+            # Debug Logic
+            if sheet_date_obj:
+                print(f"   -> Comparing with Sheet: {sheet_date_obj} ({row['Time_Slot']})")
+                
                 if sheet_date_obj == target_date and row['Time_Slot'].lower() == time_slot.lower():
+                    print("   -> MATCH FOUND! BLOCKED.")
                     return "Booked"
                 
         return "Available"
