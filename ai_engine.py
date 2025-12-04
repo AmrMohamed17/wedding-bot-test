@@ -2,7 +2,7 @@ import os
 import streamlit as st
 import google.generativeai as genai
 from datetime import datetime
-from database import check_availability, add_booking, get_info, get_full_knowledge_base
+from database import check_availability, get_info, get_full_knowledge_base
 
 # --- CONFIGURATION ---
 try:
@@ -12,31 +12,17 @@ except (FileNotFoundError, KeyError):
 
 genai.configure(api_key=API_KEY)
 
-# --- GLOBAL MEMORY ---
 active_sessions = {}
 
 # --- TOOLS ---
+# Only 2 Tools now! No booking tool.
 def tool_check_availability(date_str: str, time_slot: str):
     return check_availability(date_str, time_slot)
-
-# UPDATED TOOL: Handles validation return codes
-def tool_book_date(date_str: str, time_slot: str, name: str, phone: str, package_name: str, total_price: str, details_summary: str):
-    
-    result = add_booking(date_str, time_slot, name, phone, package_name, total_price, details_summary)
-    
-    if result == "SUCCESS":
-        deposit_key = f"Deposit_{time_slot}" 
-        amount = get_info(deposit_key)
-        return f"SUCCESS: Booking recorded. Total Deal: {total_price} EGP. Deposit Required: {amount} EGP within 48 hours."
-    elif result == "PAST_DATE_ERROR":
-        return "ERROR: Cannot book a date in the past or today. Please ask user for a future date."
-    else:
-        return "Booking Failed. System Error."
 
 def tool_get_general_info(key: str):
     return get_info(key)
 
-tools = [tool_check_availability, tool_book_date, tool_get_general_info]
+tools = [tool_check_availability, tool_get_general_info]
 
 # --- MAIN FUNCTION ---
 def get_bot_response(user_message, user_phone):
@@ -44,50 +30,43 @@ def get_bot_response(user_message, user_phone):
     
     today = datetime.now().strftime("%Y-%m-%d")
     knowledge_base = get_full_knowledge_base()
+    admin_phone = get_info('Admin_Phone')
     
-    # --- UPDATED PERSONA ---
+    # --- UPDATED PERSONA (Referral Mode) ---
     nour_instruction = f"""
-    You are 'Nour', the Sales Assistant for 'Pictures Hall' (قاعة بيكتشرز) in Mansoura.
+    You are 'Nour', the Sales Assistant for 'Pictures Hall' (قاعة بيكتشرز).
     Current Date: {today}.
     
     📚 KNOWLEDGE BASE:
     {knowledge_base}
     
-    🛑 STRICT RULES (DO NOT BREAK):
+    🛑 STRICT RULES:
     
-    1. **UNKNOWN INFO:** 
-       - If user asks about something NOT in the Knowledge Base, DO NOT GUESS.
-       - Say: "For this specific detail, please contact the administration directly: {get_info('Admin_Phone')}".
+    1. **NO BOOKING:** You CANNOT create bookings yourself. You are "Read Only".
+    2. **CHECKING AVAILABILITY:**
+       - If user asks for a date, ask "Day or Night?"
+       - Use `tool_check_availability`.
+       - **IF AVAILABLE:** Say: "The date is available! 🎉 To finalize the booking, please contact the administration at: {admin_phone}".
+       - **IF BOOKED:** Say: "Sorry, this day is already booked."
+       - **IF PAST:** Say: "We cannot check past dates."
        
-    2. **CAPACITY LIMIT:** 
-       - Max capacity is **400 Guests**.
-       - If > 400, say: "Our hall capacity is 400. For larger numbers, please contact the administration."
+    3. **PRICING:** 
+       - You can calculate prices and explain packages fully.
+       - But when they say "Okay, book it", refer them to the Admin Phone {admin_phone}.
        
-    3. **DATE VALIDATION:**
-       - **Future Dates Only:** You CANNOT book today or past dates. If user asks for {today} or before, refuse politely.
-       
-    4. **DATA VALIDATION:**
-       - **Name:** Full Name (3 parts).
-       - **Phone:** Valid Egypt format (01xxxxxxxxx).
-       
-    5. **BOOKING & PRICING:**
-       - Calculate **Total Price** (Package + Extras).
-       - Create a **Details Summary**.
-       - Use `tool_book_date` with all fields.
-       
-    6. **TONE:** Professional, Egyptian Arabic, Polite. No "Habiby".
+    4. **CAPACITY:** Max 400.
+    5. **TONE:** Professional, Egyptian Arabic.
     """
 
     if user_phone not in active_sessions:
         try:
             model = genai.GenerativeModel(
-                model_name='models/gemini-2.5-flash', # Keeping your preferred model
+                model_name='models/gemini-2.5-flash',
                 tools=tools,
                 system_instruction=nour_instruction
             )
             active_sessions[user_phone] = model.start_chat(enable_automatic_function_calling=True)
         except Exception as e:
-            print(f"Error: {e}")
             return "عذرًا، حدث خطأ أثناء تشغيل النظام."
     
     chat_session = active_sessions[user_phone]
@@ -95,6 +74,5 @@ def get_bot_response(user_message, user_phone):
         response = chat_session.send_message(user_message)
         return response.text
     except Exception as e:
-        print(f"Error: {e}")
         del active_sessions[user_phone]
-        return "عذرًا، حدث خطأ تقني. يرجى المحاولة مرة أخرى."
+        return "عذرًا، حدث خطأ تقني."

@@ -2,7 +2,6 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
 import streamlit as st
-import json
 
 # --- CONFIGURATION ---
 SHEET_NAME = "Wedding_Hall_Database"
@@ -87,53 +86,32 @@ def get_info(key):
     return db_cache["info"].get(key, "Not Found")
 
 def check_availability(date_str, time_slot):
-    if sh is None: connect_db()
-    worksheet = sh.worksheet("Bookings")
-    records = worksheet.get_all_records()
-    for row in records:
-        if str(row['Date']) == str(date_str) and row['Time_Slot'].lower() == time_slot.lower():
-            if row['Status'] in ['Booked', 'Pending']:
-                return "Booked"
-    return "Available"
-
-# --- UPDATED BOOKING FUNCTION ---
-def add_booking(date, time_slot, name, phone, package_name, total_price, details):
     """
-    Saves booking with separate Price and Details columns.
-    Checks if date is in the future.
+    Checks if a slot is blocked in the sheet.
     """
     try:
-        if sh is None: connect_db()
-        
-        # 1. DATE VALIDATION (No past bookings)
-        booking_date = datetime.strptime(date, "%Y-%m-%d").date()
+        # 1. Validate Date first
+        booking_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         today_date = datetime.now().date()
         
-        if booking_date <= today_date:
-            print(f"❌ Attempted to book past/today date: {date}")
-            return "PAST_DATE_ERROR"
+        if booking_date < today_date:
+            return "PAST_DATE"
 
-        # 2. ADD ROW TO SHEET
+        # 2. Check Sheet
+        if sh is None: connect_db()
         worksheet = sh.worksheet("Bookings")
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        records = worksheet.get_all_records()
         
-        # New Column Order: 
-        # Date | Time | Status | Name | Phone | Package | Total_Price | Details | Timestamp
-        row_data = [
-            date, 
-            time_slot, 
-            "Pending", 
-            name, 
-            phone, 
-            package_name, 
-            total_price, 
-            details, 
-            timestamp
-        ]
+        for row in records:
+            # We assume the Admin puts booked dates here
+            # Make sure Date format in sheet matches YYYY-MM-DD
+            if str(row['Date']) == str(date_str) and row['Time_Slot'].lower() == time_slot.lower():
+                return "Booked"
+                
+        return "Available"
         
-        worksheet.append_row(row_data)
-        return "SUCCESS"
-        
+    except ValueError:
+        return "INVALID_DATE_FORMAT"
     except Exception as e:
-        print(f"Error adding booking: {e}")
-        return "SYSTEM_ERROR"
+        print(f"Error: {e}")
+        return "Available" # Default to open if error, but AI handles the response
