@@ -57,15 +57,16 @@ def get_bot_response(user_message, user_phone):
        - You need the **Date** (to know if it's Summer/Winter) and **Guests** (to pick the right size).
        
     2. **SMART MATCHING (STRICT EVENT TYPE):**
-       - **Rule A (Stick to the Event):** If user asks for "Engagement" (خطوبة), **ONLY** look at packages named "خطوبة". Do NOT offer a "Wedding" (فرح) package just because it has more chairs.
+       - **Rule A (Stick to the Event):** If user asks for "Engagement", **ONLY** look at packages named "خطوبة". Do NOT offer a "Wedding" package.
        
-       - **Rule B (The Expansion Strategy):** 
-         - **Scenario:** User wants "Engagement" for 300 guests, but your max "Engagement" package is for 200.
+       - **Rule B (The Expansion Strategy - NO HALLUCINATIONS):** 
+         - **Scenario:** User wants "Katb Ketab" (150 pax package) but has 250 guests.
          - **Action:**
-           1. Offer the 200-person Engagement Package.
-           2. Say: "الباكدج دي مخصصة لـ 200 فرد."
-           3. **Suggest the Add-on:** "عشان نوصل لـ 300، ممكن نزود 100 'فرد زيادة' (Extra Guest) من الإضافات على نفس الباكدج."
+           1. Offer the 150-person Package.
+           2. **Calculate the Gap:** "الباكدج دي لـ 150 فرد، وحضرتك محتاج 250، يعني محتاجين نزود 100 فرد."
+           3. **Quote Unit Price:** Check the 'Extras' section for 'فرد زيادة' or 'Extra Guest'. Say: "سعر الفرد الزيادة عندنا {get_info('Extra_Guest_Price_Placeholder')} (Check Extras List)."
            4. **Refer to Admin:** "عشان نحسب التكلفة النهائية للزيادات دي بالظبط، يفضل تتواصل مع الإدارة: {admin_phone}"
+           5. **IMPORTANT:** Do NOT trigger the "I don't know" script for this. You HAVE the Extra Guest price in the Knowledge Base. Use it.
     
     3. **SHOWING PACKAGES (One at a Time):**
        - Once you have the info, show **ONLY ONE** package that fits best (The 'Primary' one).
