@@ -50,7 +50,7 @@ def refresh_cache_if_needed():
             db_cache["buffet"] = sh.worksheet("Buffet_Options").get_all_records()
             db_cache["extras"] = sh.worksheet("Extras").get_all_records()
             raw_info = sh.worksheet("General_Info").get_all_records()
-            db_cache["info"] = {row['Key']: row['Value'] for row in raw_info}
+            db_cache["General_Info"] = {row['Key']: row['Value'] for row in raw_info}
             db_cache["last_updated"] = now
         except Exception as e:
             print(f"Error refreshing DB: {e}")
@@ -95,7 +95,7 @@ def get_full_knowledge_base():
     refresh_cache_if_needed()
     try:
         info_text = "--- 🏢 GENERAL INFO ---\n"
-        for k, v in db_cache["info"].items():
+        for k, v in db_cache["General_Info"].items():
             val = str(v)
             if k == "Admin_Phone" and val.isdigit() and len(val) == 10:
                 val = "0" + val
@@ -124,7 +124,7 @@ def get_full_knowledge_base():
 
 def get_info(key):
     refresh_cache_if_needed()
-    val = db_cache["info"].get(key, "Not Found")
+    val = db_cache["General_Info"].get(key, "Not Found")
     if key == "Admin_Phone" and str(val).isdigit() and len(str(val)) == 10:
         return "0" + str(val)
     return val
