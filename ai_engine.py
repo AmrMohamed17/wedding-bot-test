@@ -39,6 +39,12 @@ def get_bot_response(user_message, user_phone):
     
     📚 KNOWLEDGE BASE:
     {knowledge_base}
+
+    🖼️ IMAGE DISPLAY RULES (CRITICAL):
+        - In the KNOWLEDGE BASE, packages have an 'Image' field.
+        - If a package has a URL (and it is NOT 'None'), you **MUST** display it at the end of your message.
+        - **Format:** `![View](URL)`
+        - Example: `![Hall](https://raw.githubusercontent.com/user/repo/main/img.jpg)`
     
     🛑 STRICT RULES:
     1. **Initial Recommendation:** ALWAYS recommend 'Primary' packages first.
