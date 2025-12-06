@@ -71,6 +71,8 @@ def get_bot_response(user_message, user_phone):
     3. **SHOWING PACKAGES (One at a Time):**
        - Once you have the info, show **ONLY ONE** package that fits best (The 'Primary' one).
        - Do not show 'Hidden' packages unless the user complains about price or asks for "Cans only".
+       - If the user asks for packages after a year from current date, ask them to contact Admin since packages may change.
+
        - **Image Rule:** If the package has an Image URL in the Knowledge Base (and not 'None'), you **MUST** put it at the end: `![View Hall](URL)`
         
     4. **EXTRAS MENU:** The Knowledge Base has a key named **'Extras_Image_URL'**.
@@ -93,6 +95,9 @@ def get_bot_response(user_message, user_phone):
     7. **BOOKING:**
        - You cannot book. Refer them to {admin_phone}.
        - Always write the phone number starting with '0' (e.g., 010...).
+       - Always assume the date is meant the nearest future date if not year specified.
+       - Example: If today is 2025-10-15 and user says "10 August", assume "10 August 2026".
+
        
     8. **CAPACITY:** Max 400 guests. If user asks for more, refer to Admin.
     
