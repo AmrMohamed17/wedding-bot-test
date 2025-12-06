@@ -127,6 +127,8 @@ def check_availability(target_date_str, time_slot):
     Checks if a slot is blocked in the sheet.
     """
     try:
+        print(f"date: {target_date_str}")
+        print(f"slot: {time_slot}")
         # 1. Parse the AI's requested date
         target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
         
