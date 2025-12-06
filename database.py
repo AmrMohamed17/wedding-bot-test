@@ -89,6 +89,8 @@ def parse_sheet_date(date_val):
         return None
 
 # --- GETTERS ---
+# ... inside database.py ...
+
 def get_full_knowledge_base():
     refresh_cache_if_needed()
     try:
@@ -101,7 +103,11 @@ def get_full_knowledge_base():
         
         pkg_text = "\n--- 📦 PACKAGES (BAQAT) ---\n"
         for p in db_cache["packages"]:
-            pkg_text += f"• ID: {p['Package_ID']} | Name: {p['Name_Arabic']} | Season: {p['Season']} | Guests: {p['Guests']} | Price: {p['Price']} | Details: {p['Details']}\n"
+            # We look for the 'Display_Tier' column. 
+            # If the client forgets to add it, we default to 'Primary' (Show everything).
+            tier = p.get('Display_Tier', 'Primary') 
+            
+            pkg_text += f"• ID: {p['Package_ID']} | Name: {p['Name_Arabic']} | Season: {p['Season']} | Guests: {p['Guests']} | Price: {p['Price']} | Tier: {tier} | Details: {p['Details']}\n"
         
         buffet_text = "\n--- 🍽️ BUFFET OPTIONS ---\n"
         for b in db_cache["buffet"]:
@@ -114,6 +120,7 @@ def get_full_knowledge_base():
         return info_text + pkg_text + buffet_text + extras_text
     except Exception:
         return "Error loading data."
+    
 
 def get_info(key):
     refresh_cache_if_needed()
